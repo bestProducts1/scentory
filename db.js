@@ -1,12 +1,9 @@
 // ==========================================
-// db.js - 产品数据管理中心 (多表合并版)
+// db.js - 产品数据管理中心 (纯香水单表版)
 // ==========================================
 
-// 1. 原本的香水表链接 (gid=0)
+// 原本的香水表链接 (gid=0)
 const URL_PERFUME = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTwZ_BgnXtX_ZdO87jkvLU_IMUByJwFKZoyzVVI0Sghwe-2_Qq676JsqsrO0AnGubJGuCxonKizijyj/pub?gid=0&single=true&output=csv";
-
-// 2. 新的电子烟表链接 (gid=1996660828)
-const URL_VAPE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTwZ_BgnXtX_ZdO87jkvLU_IMUByJwFKZoyzVVI0Sghwe-2_Qq676JsqsrO0AnGubJGuCxonKizijyj/pub?gid=1996660828&single=true&output=csv";
 
 // 缓存时间 (1分钟)
 const CACHE_DURATION = 1 * 60 * 1000;
@@ -18,9 +15,9 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function initProductData() {
-  // ⚡️ [重要] 更新版本号至 V6，强制刷新旧缓存以合并新表数据
-  const cacheKey = "perfumeDB_Data_V6";
-  const timeKey = "perfumeDB_Time_V6";
+  // 更新版本号，强制刷新旧缓存，清除之前残留的电子烟数据
+  const cacheKey = "perfumeDB_Data_V7";
+  const timeKey = "perfumeDB_Time_V7";
 
   const now = new Date().getTime();
   const cachedTime = localStorage.getItem(timeKey);
@@ -28,7 +25,7 @@ async function initProductData() {
 
   // 1. 尝试加载缓存
   if (cachedData && cachedTime && now - cachedTime < CACHE_DURATION) {
-    console.log("🚀 加载合并后的缓存数据");
+    console.log("🚀 加载香水缓存数据");
     try {
       window.perfumeDB = JSON.parse(cachedData);
       runPageLogic();
@@ -38,31 +35,23 @@ async function initProductData() {
     }
   }
 
-  // 2. 同时下载两个表格的数据
-  console.log("🌐 正在同步多个表格数据...");
+  // 2. 只下载香水表格的数据
+  console.log("🌐 正在同步香水数据...");
   try {
-    const [resPerfume, resVape] = await Promise.all([
-      fetch(URL_PERFUME),
-      fetch(URL_VAPE)
-    ]);
+    const response = await fetch(URL_PERFUME);
 
-    if (!resPerfume.ok || !resVape.ok) throw new Error("部分表格获取失败");
+    if (!response.ok) throw new Error("香水表格获取失败");
 
-    const csvPerfume = await resPerfume.text();
-    const csvVape = await resVape.text();
+    const csvPerfume = await response.text();
 
-    // 解析并合并数据
-    const dataPerfume = parseCSV(csvPerfume);
-    const dataVape = parseCSV(csvVape);
-    
-    // 将电子烟数据合并到总数据库中
-    window.perfumeDB = [...dataPerfume, ...dataVape];
+    // 解析数据
+    window.perfumeDB = parseCSV(csvPerfume);
 
     // 存入缓存
     localStorage.setItem(cacheKey, JSON.stringify(window.perfumeDB));
     localStorage.setItem(timeKey, now);
 
-    console.log(`✅ 数据同步完成！总计: ${window.perfumeDB.length} 个产品`);
+    console.log(`✅ 数据同步完成！总计: ${window.perfumeDB.length} 个香水产品`);
     runPageLogic();
   } catch (error) {
     console.error("数据下载失败:", error);
